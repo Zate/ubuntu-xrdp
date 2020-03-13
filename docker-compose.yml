@@ -1,21 +1,93 @@
 version: '3.5'
 services:
-  terminalserver:
-    build: ./
-    image: danielguerra/ubuntu-xrdp
-    container_name: uxrdp
-    hostname: terminalserver
+  db:
+    hostname: db
+    image: zate75/bastion:mysql
+    restart: always
+    volumes:
+      - data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - internal
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  guacd:
+    hostname: guacd
+    image: guacamole/guacd:0.9.12-incubating
+    restart: always
+    networks:
+      - internal
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  guacamole:
+    image: guacamole/guacamole:0.9.12-incubating
+    restart: always
+    ports:
+      - 8080:8080
+    links:
+      - guacd
+      - db
+    environment:
+      GUACD_HOSTNAME: guacd
+      MYSQL_HOSTNAME: db
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - internal
+      - traefik-public
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.backend=bastion
+        - traefik.frontend.rule=Host:bastion.zate.org
+        - traefik.docker.network=traefik-public
+        - traefik.enable=true
+        - traefik.port=8080
+        - traefik.tags=traefik-public
+        - traefik.redirectorservice.frontend.entryPoints=http
+        - traefik.redirectorservice.frontend.redirect.entryPoint=https
+        # Traefik service that listens to HTTPS
+        - traefik.webservice.frontend.entryPoints=https
+
+  ts:
+    image: zate75/bastion:latest
+    container_name: bastion
+    hostname: bastion
     restart: always
     shm_size: 1g
     environment:
        PASSWORDHASH: $$1$$z53Cg/fV$$06o379IvIOxj/ESruVKrG1
        IDLETIME: 11
     ports:
-      - "3389:3389"
-      - "2222:22"
+      - "3389"
     volumes:
       - ssh:/etc/ssh/
-      - /home/:/home/
-
+      - /home/ts:/home/
+    networks:
+      - internal
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
 volumes:
   ssh:
+  data:
+
+networks:
+  traefik-public:
+    external: true
+  internal:
+    external: false
