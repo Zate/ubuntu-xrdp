@@ -4,6 +4,7 @@ services:
     hostname: db
     image: zate75/bastion:mysql
     restart: always
+    command: mysqld --sql_mode="" --default-authentication-plugin=mysql_native_password
     volumes:
       - data:/var/lib/mysql
     environment:
@@ -30,13 +31,15 @@ services:
           - node.role == manager
 
   guacamole:
-    image: guacamole/guacamole:0.9.12-incubating
+    # image: guacamole/guacamole:0.9.12-incubating
+    image: glypho:latest
     restart: always
     ports:
       - 8080:8080
     links:
       - guacd
       - db
+      - ts
     environment:
       GUACD_HOSTNAME: guacd
       MYSQL_HOSTNAME: db
@@ -72,7 +75,7 @@ services:
        PASSWORDHASH: $$1$$z53Cg/fV$$06o379IvIOxj/ESruVKrG1
        IDLETIME: 11
     ports:
-      - "3389"
+      - "3389:3389"
     volumes:
       - ssh:/etc/ssh/
       - /home/ts:/home/

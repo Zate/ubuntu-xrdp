@@ -1,0 +1,141 @@
+version: '3.5'
+services:
+  cozy:
+    image: guacozy/guacozy-server
+    restart: always
+    depends_on:
+      - db
+    volumes:
+      - config/ssl:/ssl/
+      - config/ldap_config.py:/app/guacozy_server/ldap_config.py
+    networks:
+      - internal
+      - traefik-public
+    labels:
+        - traefik.backend=cozy
+        - traefik.frontend.rule=Host:cozy.zate.org
+        - traefik.docker.network=traefik-public
+        - traefik.enable=true
+        - traefik.port=80
+        - traefik.tags=traefik-public
+        - traefik.redirectorservice.frontend.entryPoints=http
+        - traefik.redirectorservice.frontend.redirect.entryPoint=https
+        # Traefik service that listens to HTTPS
+        - traefik.webservice.frontend.entryPoints=https
+    environment:
+      - DJANGO_SECRET_KEY=abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz
+      - FIELD_ENCRYPTION_KEY=qjq4ObsXMqiqQyfKgD-jjEGm4ep8RaHKGRg4ohGCi1A=
+      - DJANGO_DB_URL=postgres://postgres@db:5432/postgres
+      - DJANGO_ALLOWED_HOSTS=cozy.zate.org
+      - DEBUG=False
+  # guacd:
+  #   image: guacamole/guacd
+  #   restart: always
+  #   networks:
+  #     - default
+  db:
+    image: postgres:10.4-alpine
+    restart: always
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+volumes:
+  postgres-data:
+  data:
+
+  # db:
+  #   hostname: db
+  #   image: zate75/bastion:mysql
+  #   restart: always
+  #   command: mysqld --sql_mode="" --default-authentication-plugin=mysql_native_password
+  #   volumes:
+  #     - data:/var/lib/mysql
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+  #     MYSQL_DATABASE: ${MYSQL_DATABASE}
+  #     MYSQL_USER: ${MYSQL_USER}
+  #     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  #   networks:
+  #     - internal
+  #   deploy:
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+
+  # guacd:
+  #   hostname: guacd
+  #   image: guacamole/guacd:0.9.12-incubating
+  #   restart: always
+  #   networks:
+  #     - internal
+  #   deploy:
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+
+  # guacamole:
+  #   # image: guacamole/guacamole:0.9.12-incubating
+  #   image: glypho:latest
+  #   restart: always
+  #   ports:
+  #     - 8080:8080
+  #   links:
+  #     - guacd
+  #     - db
+  #     - ts
+  #   environment:
+  #     GUACD_HOSTNAME: guacd
+  #     MYSQL_HOSTNAME: db
+  #     MYSQL_DATABASE: ${MYSQL_DATABASE}
+  #     MYSQL_USER: ${MYSQL_USER}
+  #     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  #   networks:
+  #     - internal
+  #     - traefik-public
+  #   deploy:
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+  #     labels:
+  #       - traefik.backend=bastion
+  #       - traefik.frontend.rule=Host:cozy.zate.org
+  #       - traefik.docker.network=traefik-public
+  #       - traefik.enable=true
+  #       - traefik.port=8080
+  #       - traefik.tags=traefik-public
+  #       - traefik.redirectorservice.frontend.entryPoints=http
+  #       - traefik.redirectorservice.frontend.redirect.entryPoint=https
+  #       # Traefik service that listens to HTTPS
+  #       - traefik.webservice.frontend.entryPoints=https
+
+  # ts:
+  #   image: zate75/bastion:latest
+  #   container_name: bastion
+  #   hostname: bastion
+  #   restart: always
+  #   shm_size: 1g
+  #   environment:
+  #      PASSWORDHASH: $$1$$z53Cg/fV$$06o379IvIOxj/ESruVKrG1
+  #      IDLETIME: 11
+  #   ports:
+  #     - "3389:3389"
+  #   volumes:
+  #     - ssh:/etc/ssh/
+  #     - /home/ts:/home/
+  #   networks:
+  #     - internal
+  #   deploy:
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+# volumes:
+#   ssh:
+#   data:
+
+networks:
+  traefik-public:
+    external: true
+  internal:
+    external: false

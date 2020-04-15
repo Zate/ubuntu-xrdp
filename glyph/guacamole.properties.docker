@@ -1,0 +1,6 @@
+mysql-hostname: $MYSQL_HOSTNAME
+mysql-database: $MYSQL_DATABASE
+mysql-username: $MYSQL_USER
+mysql-password: $MYSQL_PASSWORD
+guacd-hostname: guacd
+guacd-port: 4822
